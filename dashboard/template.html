@@ -214,6 +214,7 @@ const totalMovies = new Set([...D.alltime.map(r => r.code), ...Object.values(D.y
 $('meta').replaceChildren(
   ...[['수집 범위', `${years[0]}–${curYear}년 (연도당 상위 50편) + 역대 누적 상위 200편`],
       ['집계 기준일', `${asOfK} (전일까지 반영)`],
+      ['업데이트', '매일 오전 7시 10분(KST) 자동 갱신'],
       ['수집 시각', D.fetchedAt.replace('T',' ').replace('+09:00',' KST')]]
   .map(([k,v]) => { const s = el('span'); s.append(k + ' ', el('b', null, v)); return s; })
 );
