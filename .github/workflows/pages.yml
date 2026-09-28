@@ -1,0 +1,84 @@
+# 매일 KOBIS 데이터를 다시 수집해 커밋하고, dashboard/index.html을 GitHub Pages로 배포한다.
+# 수집·검증이 실패하면 커밋·배포하지 않고 멈춘다(이전 사이트가 그대로 남음).
+name: Dashboard (collect & deploy)
+
+on:
+  schedule:
+    - cron: "10 22 * * *"   # 매일 07:10 KST (UTC 22:10)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["dashboard/**", ".github/workflows/pages.yml"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect from KOBIS
+        if: github.event_name != 'push'
+        run: |
+          python3 scrape.py
+          python3 totals.py
+          python3 nation.py
+
+      - name: Validate data
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          d = json.load(open("kobis.json"))
+          errs = []
+          if len(d["alltime"]) < 100: errs.append(f"alltime rows {len(d['alltime'])}")
+          for y in d["years"]:
+              if len(d["yearly"][str(y)]) < 20: errs.append(f"{y} rows {len(d['yearly'][str(y)])}")
+          if [t["y"] for t in d["totals"]] != d["years"]: errs.append("totals years mismatch")
+          if d.get("nationMissing", 1) != 0: errs.append(f"nationMissing {d.get('nationMissing')}")
+          if errs:
+              print("validation failed:", errs); sys.exit(1)
+          print("ok", d["asOf"], "rejected", d["rejectedCount"])
+          EOF
+
+      - name: Build page
+        run: python3 build.py
+
+      - name: Commit updated data
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add kobis.json index.html
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "Update KOBIS data ($(python3 -c 'import json;print(json.load(open("kobis.json"))["asOf"])'))"
+          git push
+
+      - name: Prepare site
+        run: mkdir -p ../_site && cp index.html ../_site/index.html
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

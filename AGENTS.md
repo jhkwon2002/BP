@@ -25,6 +25,12 @@ python3 scrape.py && python3 totals.py && python3 nation.py && python3 build.py 
 
 표준 라이브러리와 `curl`만 쓴다. 데이터 갱신은 www.kobis.or.kr 접속이 필요하다.
 
+### 자동 갱신·배포 (`.github/workflows/pages.yml`)
+
+- 매일 07:10 KST(수동 실행도 가능)에 수집 → 검증 → 빌드 → `kobis.json`·`index.html` 커밋 → GitHub Pages 배포.
+- `main`에 `dashboard/**` 변경을 푸시하면 수집 없이 빌드·배포만 한다.
+- 수집이나 검증이 실패하면 커밋·배포하지 않는다(이전 사이트 유지). 검증 조건을 느슨하게 바꾸지 말 것.
+
 ### 규칙
 
 - 숫자는 KOBIS에서 받은 값만 쓴다. 추정치나 기억에 의존한 값을 넣지 않는다.
