@@ -1,0 +1,401 @@
+<title>한국 박스오피스 관객 비교</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Nanum+Myeongjo:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --line:#e3e6eb; --grid:#eceef2;
+  --ink:#10131a; --ink-2:#4c5260; --ink-3:#7a808c;
+  --kr:#2a78d6; --fr:#eb6834;
+  --bar:#2a78d6; --bar-soft:#86b6ef; --bar-hover:#1c5cab; --accent:#c2410c;
+  --chip:#eef3fb; --chip-ink:#1c5cab;
+  --serif:"Nanum Myeongjo","Noto Serif KR",serif;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#121418; --surface:#1a1d22; --line:#2c3038; --grid:#252930;
+    --ink:#f2f3f5; --ink-2:#b9bdc6; --ink-3:#8b909b;
+    --kr:#3987e5; --fr:#d95926;
+    --bar:#3987e5; --bar-soft:#1c5cab; --bar-hover:#6da7ec; --accent:#f08a4b;
+    --chip:#1f2b3d; --chip-ink:#9ec5f4;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121418; --surface:#1a1d22; --line:#2c3038; --grid:#252930;
+  --ink:#f2f3f5; --ink-2:#b9bdc6; --ink-3:#8b909b;
+  --kr:#3987e5; --fr:#d95926;
+  --bar:#3987e5; --bar-soft:#1c5cab; --bar-hover:#6da7ec; --accent:#f08a4b;
+  --chip:#1f2b3d; --chip-ink:#9ec5f4;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;padding:0 16px}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;display:flex;flex-direction:column;gap:22px}
+header{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:12px;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase}
+h1{font-family:var(--serif);font-weight:800;font-size:clamp(26px,4.4vw,38px);line-height:1.2;margin:0;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:700;font-size:20px;margin:0;text-wrap:balance}
+h3{font-size:13px;font-weight:600;margin:0;color:var(--ink-2)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--ink-2);font-size:13px}
+.meta b{color:var(--ink);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stat{background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.stat .k{font-size:12px;color:var(--ink-3)}
+.stat .v{font-family:var(--mono);font-size:18px;font-weight:500}
+section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
+.sec-head p{margin:2px 0 0;color:var(--ink-2);font-size:13px;max-width:62ch}
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+label.ctl{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
+select,input[type=search]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+input[type=range]{accent-color:var(--bar);width:140px}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--bar);outline-offset:2px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 9px;border-radius:999px;background:var(--chip);color:var(--chip-ink);white-space:nowrap}
+.pill.warn{background:transparent;border:1px dashed var(--accent);color:var(--accent)}
+/* horizontal bars */
+.bars{display:flex;flex-direction:column;gap:2px}
+.brow{display:grid;grid-template-columns:28px minmax(90px,220px) 1fr;align-items:center;gap:10px;padding:3px 4px;border-radius:6px;cursor:default}
+.brow:hover,.brow:focus-visible{background:var(--bg)}
+.brow .rk{font-family:var(--mono);color:var(--ink-3);font-size:12px;text-align:right}
+.brow .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .tt small{color:var(--ink-3);font-family:var(--mono);font-size:11px;margin-left:6px}
+.track{position:relative;display:flex;align-items:center;gap:8px;min-width:0}
+.fill{height:14px;background:var(--bar);border-radius:0 4px 4px 0;min-width:2px;flex:none}
+.fill.K,.sw.K{background:var(--kr)} .fill.F,.sw.F{background:var(--fr)} .fill.U{background:var(--ink-3)}
+.fill.soft{opacity:.55}
+.brow:hover .fill{filter:brightness(.88)}
+.tt small.nat{margin:0 6px 0 0;font-family:var(--sans);font-size:11px;color:var(--ink-2);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink-2)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.track .v{font-family:var(--mono);font-size:12px;color:var(--ink-2);white-space:nowrap}
+@media (max-width:560px){.brow{grid-template-columns:22px 1fr;row-gap:2px}.brow .track{grid-column:2}}
+/* svg charts */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.chart{display:flex;flex-direction:column;gap:6px;min-width:0}
+.chart.wide{grid-column:1/-1}
+.chart svg{width:100%;height:auto;display:block;overflow:visible}
+.chart svg text{fill:var(--ink-3);font-family:var(--mono);font-size:11px}
+.chart svg .lbl{fill:var(--ink-2)}
+.gridl{stroke:var(--grid);stroke-width:1}
+.axis{stroke:var(--line)}
+.hit{fill:transparent;cursor:crosshair}
+.tip{position:fixed;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 6px 20px rgba(0,0,0,.12);max-width:260px;z-index:10}
+.tip .tv{font-family:var(--mono);font-size:14px;font-weight:500}
+.tip .ts{color:var(--ink-2)}
+.note{font-size:12px;color:var(--ink-3);margin:0}
+details summary{cursor:pointer;color:var(--ink-2);font-size:13px}
+.tbl{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;font-size:12px;width:100%}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+/* movie picker */
+.picker{position:relative;max-width:420px;width:100%}
+.picker input{width:100%}
+.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--surface);border:1px solid var(--line);border-radius:8px;max-height:280px;overflow:auto;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.sugg button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;color:var(--ink);font:inherit;padding:7px 10px;cursor:pointer}
+.sugg button:hover,.sugg button:focus-visible{background:var(--bg)}
+.sugg small{color:var(--ink-3);font-family:var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;border-radius:999px;padding:3px 6px 3px 11px;cursor:pointer}
+.chips button span{color:var(--ink-3);font-size:15px;line-height:1}
+.linkbtn{background:none;border:0;color:var(--chip-ink);font:inherit;font-size:13px;cursor:pointer;padding:0}
+footer{color:var(--ink-3);font-size:12px;display:flex;flex-direction:column;gap:4px}
+footer a{color:var(--ink-2)}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">KOBIS 영화관입장권통합전산망 · 박스오피스</div>
+    <h1>한국 극장가, 해마다 누가 가장 많이 모았나</h1>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <section id="year">
+    <div class="sec-head">
+      <div>
+        <h2>연도별 영화 관객수</h2>
+        <p id="yearDesc"></p>
+      </div>
+      <div class="controls">
+        <label class="ctl" for="selYear">연도
+          <select id="selYear"></select></label>
+        <label class="ctl" for="topN">상위 <span class="num" id="topNv">20</span>편
+          <input type="range" id="topN" min="5" max="50" step="5" value="20"></label>
+      </div>
+    </div>
+    <div class="legend" aria-label="범례"><span><i class="sw K"></i>한국영화</span><span><i class="sw F"></i>외국영화</span></div>
+    <div class="bars" id="yearBars"></div>
+    <p class="note" id="yearNote"></p>
+  </section>
+
+  <section id="trend">
+    <div class="sec-head">
+      <div>
+        <h2>연도 간 비교</h2>
+        <p>한 해 안에서 모인 관객만 셉니다. 전체 관객수는 KOBIS 테마통계 ‘총 관객수 및 매출액’, 나머지는 연도별 박스오피스 값입니다. 해를 넘겨 상영한 영화는 연도별로 나뉘어 집계됩니다. 막대는 아래가 한국영화, 위가 외국영화입니다.</p>
+      </div>
+    </div>
+    <div class="legend" aria-label="범례"><span><i class="sw K"></i>한국영화</span><span><i class="sw F"></i>외국영화</span></div>
+    <div class="grid2">
+      <div class="chart wide"><h3>연도별 전체 관객수 <span class="note">모든 상영 영화 합계</span></h3><svg id="cTotal" viewBox="0 0 1040 240" role="img" aria-label="연도별 전체 관객수 막대 차트"></svg></div>
+      <div class="chart"><h3>연도별 1위 영화 관객수</h3><svg id="cTop1" viewBox="0 0 520 260" role="img" aria-label="연도별 1위 영화 관객수 선 차트"></svg></div>
+      <div class="chart"><h3>연도별 상위 10편 관객수 합계</h3><svg id="cTop10" viewBox="0 0 520 260" role="img" aria-label="연도별 상위 10편 관객수 합계 막대 차트"></svg></div>
+    </div>
+    <p class="note" id="trendNote"></p>
+    <details><summary>표로 보기</summary><div class="tbl"><table id="trendTbl"></table></div></details>
+  </section>
+
+  <section id="compare">
+    <div class="sec-head">
+      <div>
+        <h2>영화끼리 나란히</h2>
+        <p>연도와 상관없이 영화를 골라 관객수를 비교합니다. 역대 누적 상위 200편에 든 영화는 개봉 이후 누적 관객수를, 그 밖의 영화는 수집한 연도별 집계를 더한 값을 씁니다(옅은 막대).</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="picker">
+        <input type="search" id="q" placeholder="영화명 검색 (예: 극한직업)" autocomplete="off" aria-label="영화 검색">
+        <div class="sugg" id="sugg" hidden></div>
+      </div>
+      <button class="linkbtn" id="clearSel" type="button">모두 지우기</button>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="legend" aria-label="범례"><span><i class="sw K"></i>한국영화</span><span><i class="sw F"></i>외국영화</span></div>
+    <div class="bars" id="cmpBars"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script id="kobis-data" type="application/json">__DATA__</script>
+<script>
+(function(){
+const D = JSON.parse(document.getElementById('kobis-data').textContent);
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString('ko-KR');
+const man = n => n >= 1e8 ? (n/1e8).toFixed(2).replace(/\.?0+$/,'') + '억' : n >= 1e4 ? Math.round(n/1e4).toLocaleString('ko-KR') + '만' : fmt(n);
+const won = n => n == null ? '–' : (n/1e8).toLocaleString('ko-KR',{maximumFractionDigits:0}) + '억 원';
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const NS = 'http://www.w3.org/2000/svg';
+const sv = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+const years = D.years.slice();
+const curYear = Math.max(...years);
+const asOfK = D.asOf.replace(/-/g, '.');
+const partial = y => +y === curYear;
+const NAT = c => D.nation[c] || 'U';
+const NATK = {K:'한국', F:'외국', U:'국적 미상'};
+const pct = (v, a) => a ? ` (${(v / a * 100).toFixed(1)}%)` : '';
+
+// ---- tooltip
+const tip = $('tip');
+function showTip(ev, value, lines){
+  tip.replaceChildren(el('div','tv',value), ...lines.map(l => el('div','ts',l)));
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x = (ev.clientX ?? ev.target.getBoundingClientRect().right) + 14, y = (ev.clientY ?? ev.target.getBoundingClientRect().top) + 14;
+  if (x + r.width > innerWidth - 8) x = innerWidth - r.width - 8;
+  if (y + r.height > innerHeight - 8) y -= r.height + 28;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => { tip.hidden = true; };
+
+// ---- header
+const totalMovies = new Set([...D.alltime.map(r => r.code), ...Object.values(D.yearly).flat().map(r => r.code)]).size;
+$('meta').replaceChildren(
+  ...[['수집 범위', `${years[0]}–${curYear}년 (연도당 상위 50편) + 역대 누적 상위 200편`],
+      ['집계 기준일', `${asOfK} (전일까지 반영)`],
+      ['수집 시각', D.fetchedAt.replace('T',' ').replace('+09:00',' KST')]]
+  .map(([k,v]) => { const s = el('span'); s.append(k + ' ', el('b', null, v)); return s; })
+);
+const at1 = D.alltime[0];
+const stats = [
+  ['역대 누적 1위', `${at1.t}`, `${man(at1.a)}명`],
+  [`${curYear}년 1위 (${asOfK} 기준)`, D.yearly[curYear][0].t, `${man(D.yearly[curYear][0].a)}명`],
+  ['수집한 영화', `${years.length}개 연도`, `${fmt(totalMovies)}편`],
+];
+$('stats').replaceChildren(...stats.map(([k,v,s]) => { const d = el('div','stat'); d.append(el('span','k',k), el('span','v',s), el('span','k',v)); return d; }));
+
+// ---- section 1: year bars
+const selYear = $('selYear');
+selYear.append(new Option('역대 누적 (전 기간)', 'all'));
+years.slice().reverse().forEach(y => selYear.append(new Option(partial(y) ? `${y} (집계 중)` : String(y), String(y))));
+selYear.value = String(curYear);
+const topN = $('topN');
+
+function barRows(container, items, opts){
+  const max = Math.max(...items.map(i => i.a), 1);
+  container.replaceChildren(...items.map((it, idx) => {
+    const row = el('div','brow'); row.tabIndex = 0;
+    row.append(el('span','rk', opts.rank ? String(it.r) : String(idx + 1)));
+    const tt = el('span','tt'); tt.append(el('small','nat',NATK[it.n]), it.t); if (it.sub) tt.append(el('small', null, it.sub)); tt.title = it.t;
+    const tr = el('span','track');
+    const f = el('span','fill ' + it.n + (it.soft ? ' soft' : '')); f.style.width = `calc(${(it.a / max * 100).toFixed(2)}% - ${(it.a / max * 90).toFixed(1)}px)`;
+    tr.append(f, el('span','v', fmt(it.a) + '명'));
+    row.append(tt, tr);
+    const on = ev => showTip(ev, fmt(it.a) + '명', it.tip);
+    row.addEventListener('pointermove', on); row.addEventListener('focus', on);
+    row.addEventListener('pointerleave', hideTip); row.addEventListener('blur', hideTip);
+    return row;
+  }));
+}
+
+function renderYear(){
+  const v = selYear.value, n = +topN.value;
+  $('topNv').textContent = n;
+  const rows = (v === 'all' ? D.alltime : D.yearly[v]).slice(0, n);
+  $('yearDesc').textContent = v === 'all'
+    ? '개봉 이후 누적 관객수 기준 역대 순위입니다 (KOBIS 역대 박스오피스).'
+    : partial(v) ? `${v}년 1월 1일부터 ${asOfK}까지 모인 관객수입니다. 연말까지 값이 계속 바뀝니다.`
+    : `${v}년 1월 1일부터 12월 31일까지 모인 관객수입니다 (KOBIS 연도별 박스오피스).`;
+  barRows($('yearBars'), rows.map(r => ({
+    r: r.r, t: r.t, a: r.a, n: NAT(r.code), sub: r.o ? r.o.slice(0,4) === v ? r.o.slice(5).replace('-','.') : r.o.replace(/-/g,'.') : '',
+    tip: [`${r.t} · ${NATK[NAT(r.code)]}영화`, `개봉 ${r.o ? r.o.replace(/-/g,'.') : '미상'}`, `매출액 ${won(r.s)}`, v === 'all' ? '역대 누적' : `${v}년 집계`]
+  })), {rank:true});
+  const kn = rows.filter(r => NAT(r.code) === 'K'), ka = kn.reduce((s,r) => s + r.a, 0), ta = rows.reduce((s,r) => s + r.a, 0);
+  $('yearNote').textContent = `상위 ${rows.length}편 중 한국영화 ${kn.length}편 · 외국영화 ${rows.length - kn.length}편 (관객 비중 한국 ${(ka / ta * 100).toFixed(1)}%). ` + (v !== 'all' && v < '2011'
+    ? '2010년 이전 값은 당시 통합전산망 연동률에 따른 발권 집계라 실제 관객보다 적게 잡혔을 수 있습니다.'
+    : '영화명 옆 숫자는 개봉일입니다 (같은 해 개봉이면 월.일만 표시).');
+}
+selYear.addEventListener('change', renderYear);
+topN.addEventListener('input', renderYear);
+
+// ---- section 2: trend charts
+let W = 520, H = 260;
+const M = {l:46, r:12, t:14, b:28};
+const top1 = years.map(y => ({y, a: D.yearly[y][0].a, t: D.yearly[y][0].t, n: NAT(D.yearly[y][0].code)}));
+const totByY = new Map(D.totals.map(r => [r.y, r]));
+const totals = years.map(y => { const r = totByY.get(y); return {y, a:r.a, k:r.ak, f:r.af}; });
+const top10 = years.map(y => { const rs = D.yearly[y].slice(0,10), k = rs.filter(r => NAT(r.code) === 'K');
+  return {y, a: rs.reduce((s,r) => s + r.a, 0), k: k.reduce((s,r) => s + r.a, 0), kn: k.length, f: rs.filter(r => NAT(r.code) !== 'K').reduce((s,r) => s + r.a, 0)}; });
+function niceMax(v){ const p = Math.pow(10, Math.floor(Math.log10(v))); const m = v / p; return (m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+function frame(svg, max){
+  svg.replaceChildren();
+  const x = i => M.l + (i + .5) * (W - M.l - M.r) / years.length;
+  const yS = v => H - M.b - v / max * (H - M.t - M.b);
+  const mt = max / Math.pow(10, Math.floor(Math.log10(max))), nt = (mt === 2.5 || mt === 5) ? 5 : 4;
+  for (let k = 0; k <= nt; k++){
+    const v = max * k / nt, yy = yS(v);
+    svg.append(sv('line',{x1:M.l,x2:W-M.r,y1:yy,y2:yy,class: k ? 'gridl':'axis'}));
+    const t = sv('text',{x:M.l-6,y:yy+4,'text-anchor':'end'}); t.textContent = v ? man(v) : '0'; svg.append(t);
+  }
+  years.forEach((y,i) => { if (i % 2 === 0 || i === years.length - 1){ const t = sv('text',{x:x(i),y:H-M.b+16,'text-anchor':'middle'}); t.textContent = "'" + String(y).slice(2); svg.append(t);} });
+  return {x, yS};
+}
+function hover(svg, i, x, lines){
+  const bw = (W - M.l - M.r) / years.length;
+  const h = sv('rect',{x:x(i)-bw/2,y:M.t,width:bw,height:H-M.t-M.b,class:'hit',tabindex:0});
+  const on = ev => showTip(ev, ...lines());
+  h.addEventListener('pointermove', on); h.addEventListener('focus', on);
+  h.addEventListener('pointerleave', hideTip); h.addEventListener('blur', hideTip);
+  svg.append(h); return h;
+}
+(function(){
+  const svg = $('cTop1'); const max = niceMax(Math.max(...top1.map(d => d.a)));
+  const {x, yS} = frame(svg, max);
+  const done = top1.filter(d => !partial(d.y));
+  const pts = done.map(d => `${x(years.indexOf(d.y))},${yS(d.a)}`).join(' ');
+  svg.append(sv('polygon',{points:`${x(0)},${yS(0)} ${pts} ${x(done.length-1)},${yS(0)}`,fill:'var(--ink-3)',opacity:.07}));
+  svg.append(sv('polyline',{points:pts,fill:'none',stroke:'var(--ink-3)','stroke-width':2,'stroke-linejoin':'round'}));
+  const last = top1[top1.length-1], li = years.length-1, pi = li - 1;
+  if (partial(last.y)) svg.append(sv('line',{x1:x(pi),y1:yS(top1[pi].a),x2:x(li),y2:yS(last.a),stroke:'var(--ink-3)','stroke-width':2,'stroke-dasharray':'3 3'}));
+  const cross = sv('line',{y1:M.t,y2:H-M.b,stroke:'var(--ink-3)','stroke-width':1,opacity:0}); svg.append(cross);
+  top1.forEach((d,i) => svg.append(sv('circle',{cx:x(i),cy:yS(d.a),r:partial(d.y)?4.5:4,fill:partial(d.y)?'var(--surface)':`var(--${d.n==='K'?'kr':'fr'})`,stroke:partial(d.y)?`var(--${d.n==='K'?'kr':'fr'})`:'var(--surface)','stroke-width':2})));
+  // direct labels: peak + current
+  const peak = top1.reduce((a,b) => b.a > a.a ? b : a);
+  [[peak,'end'],[last,'end']].forEach(([d,anc],k) => { if (k && d === peak) return; const i = years.indexOf(d.y); const t = sv('text',{x:x(i)-7,y:yS(d.a)-8,'text-anchor':anc,class:'lbl'}); t.textContent = `${d.t} ${man(d.a)}`; svg.append(t); });
+  top1.forEach((d,i) => { const h = hover(svg, i, x, () => [fmt(d.a)+'명', [`${d.y}년 1위 · ${d.t}`, `${NATK[d.n]}영화`].concat(partial(d.y)?[`${asOfK} 기준 (집계 중)`]:[])]);
+    h.addEventListener('pointerenter', () => { cross.setAttribute('x1',x(i)); cross.setAttribute('x2',x(i)); cross.setAttribute('opacity',.5); });
+    h.addEventListener('pointerleave', () => cross.setAttribute('opacity',0)); });
+})();
+function barChart(id, data, w, h, tipLines){
+  W = w; H = h;
+  const svg = $(id); const max = niceMax(Math.max(...data.map(d => d.a)));
+  const {x, yS} = frame(svg, max);
+  const bw = (W - M.l - M.r) / years.length - 4;
+  data.forEach((d,i) => {
+    const y0 = yS(0), yk = yS(d.k), y1 = yS(d.a), r = Math.min(4, Math.max(0, (yk-1-y1)/2));
+    const xL = x(i)-bw/2, xR = x(i)+bw/2, op = partial(d.y) ? .55 : 1;
+    svg.append(sv('rect',{x:xL,y:yk+1,width:bw,height:Math.max(0,y0-yk-1),fill:'var(--kr)',opacity:op}));
+    if (d.f > 0) svg.append(sv('path',{d:`M${xL},${yk-1}V${y1+r}Q${xL},${y1} ${xL+r},${y1}H${xR-r}Q${xR},${y1} ${xR},${y1+r}V${yk-1}Z`,fill:'var(--fr)',opacity:op}));
+  });
+  const pk = data.reduce((a,b) => b.a > a.a ? b : a), pi = years.indexOf(pk.y);
+  const t = sv('text',{x:x(pi),y:yS(pk.a)-6,'text-anchor':'middle',class:'lbl'}); t.textContent = man(pk.a); svg.append(t);
+  data.forEach((d,i) => hover(svg, i, x, () => [fmt(d.a)+'명', tipLines(d).concat(partial(d.y)?[`${asOfK} 기준 (집계 중)`]:[])]));
+  W = 520; H = 260;
+}
+barChart('cTop10', top10, 520, 260, d => [`${d.y}년 상위 10편 합계`, `한국영화 ${d.kn}편 ${fmt(d.k)}명${pct(d.k,d.a)}`, `외국영화 ${10-d.kn}편 ${fmt(d.f)}명${pct(d.f,d.a)}`]);
+barChart('cTotal', totals, 1040, 240, d => [`${d.y}년 전체 관객수`, `한국영화 ${fmt(d.k)}명${pct(d.k,d.a)}`, `외국영화 ${fmt(d.f)}명${pct(d.f,d.a)}`]);
+$('trendNote').textContent = `${curYear}년은 ${asOfK}까지 집계한 값이라 점선·옅은 막대로 표시했습니다. 1위 선 차트의 점 색은 그해 1위 영화의 국적입니다.`;
+(function(){
+  const t = $('trendTbl'); const hr = el('tr');
+  const hd = ['연도','전체 관객수','한국영화','외국영화','1위 영화','1위 관객수','상위 10편 합계','상위 10편 중 한국'];
+  hd.forEach((h,i) => hr.append(el('th', i===0||i===4?null:'r', h)));
+  const th = el('thead'); th.append(hr); const tb = el('tbody');
+  years.slice().reverse().forEach(y => { const i = years.indexOf(y); const r = el('tr');
+    r.append(el('td',null, partial(y)?`${y} (${asOfK})`:String(y)), el('td','r',fmt(totals[i].a)), el('td','r',fmt(totals[i].k)), el('td','r',fmt(totals[i].f)), el('td',null,`${top1[i].t} (${NATK[top1[i].n]})`), el('td','r',fmt(top1[i].a)), el('td','r',fmt(top10[i].a)), el('td','r',`${top10[i].kn}편`)); tb.append(r); });
+  t.replaceChildren(th, tb);
+})();
+
+// ---- section 3: movie compare
+const movies = new Map();
+D.alltime.forEach(r => movies.set(r.code, {code:r.code, t:r.t, o:r.o, all:r, yrs:[]}));
+years.forEach(y => D.yearly[y].forEach(r => {
+  if (!movies.has(r.code)) movies.set(r.code, {code:r.code, t:r.t, o:r.o, all:null, yrs:[]});
+  movies.get(r.code).yrs.push({y, a:r.a, r:r.r});
+}));
+movies.forEach(m => { m.val = m.all ? m.all.a : m.yrs.reduce((s,x) => s + x.a, 0); });
+const norm = s => s.replace(/\s+/g,'').toLowerCase();
+let sel = D.alltime.slice(0,3).map(r => r.code).concat(
+  years.filter(y => y % 5 === 0 && !partial(y)).map(y => D.yearly[y][0].code));
+sel = [...new Set(sel)].slice(0,8);
+
+const q = $('q'), sugg = $('sugg');
+function renderSugg(){
+  const s = norm(q.value);
+  if (!s){ sugg.hidden = true; return; }
+  const hits = [...movies.values()].filter(m => norm(m.t).includes(s)).sort((a,b) => b.val - a.val).slice(0,12);
+  sugg.replaceChildren(...(hits.length ? hits.map(m => {
+    const b = el('button'); b.type = 'button';
+    b.append(el('span', null, m.t), el('small', null, `${NATK[NAT(m.code)]} · ${m.o ? m.o.slice(0,4) : ''} · ${man(m.val)}명`));
+    b.addEventListener('click', () => { if (!sel.includes(m.code)) sel.push(m.code); q.value = ''; sugg.hidden = true; renderCmp(); q.focus(); });
+    return b;
+  }) : [el('div','note','일치하는 영화가 없습니다. 수집 범위(연도별 상위 50편, 역대 200편) 밖일 수 있습니다.')]));
+  sugg.hidden = false;
+}
+q.addEventListener('input', renderSugg);
+q.addEventListener('keydown', e => { if (e.key === 'Enter'){ const b = sugg.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') sugg.hidden = true; });
+document.addEventListener('click', e => { if (!e.target.closest('.picker')) sugg.hidden = true; });
+$('clearSel').addEventListener('click', () => { sel = []; renderCmp(); });
+
+function renderCmp(){
+  const ms = sel.map(c => movies.get(c)).sort((a,b) => b.val - a.val);
+  $('chips').replaceChildren(...ms.map(m => { const b = el('button'); b.type = 'button'; b.setAttribute('aria-label', m.t + ' 빼기');
+    b.append(m.t, el('span', null, '×')); b.addEventListener('click', () => { sel = sel.filter(c => c !== m.code); renderCmp(); }); return b; }));
+  if (!ms.length){ $('cmpBars').replaceChildren(el('p','note','위 검색창에서 영화를 골라 추가하세요.')); return; }
+  barRows($('cmpBars'), ms.map(m => ({
+    t: m.t, a: m.val, n: NAT(m.code), soft: !m.all, sub: (m.o ? m.o.slice(0,4) : '') + (m.all ? '' : ' · 연도 합산'),
+    tip: [`${m.t} · ${NATK[NAT(m.code)]}영화`, m.all ? `역대 누적 ${m.all.r}위 · 개봉 ${m.o ? m.o.replace(/-/g,'.') : '미상'}` : '연도별 집계 합산 (역대 200위 밖)']
+      .concat(m.yrs.map(x => `${x.y}년 ${x.r}위 · ${fmt(x.a)}명`))
+  })), {rank:false});
+}
+
+// ---- footer
+const drop = D.rejectedCount;
+$('foot').append(
+  (() => { const p = el('div'); p.append('출처: ', Object.assign(el('a',null,'KOBIS 영화관입장권통합전산망'), {href:'https://www.kobis.or.kr/kobis/business/stat/boxs/findYearlyBoxOfficeList.do', target:'_blank', rel:'noopener'}), ` 박스오피스 › 연도별 · 역대, 테마통계 › 총 관객수 및 매출액 (전일 기준, 집계 기준일 ${asOfK}).`); return p; })(),
+  el('div', null, `KOBIS 안내: 통합전산망 발권 데이터 집계값이며 공식통계(마감 기준)와 다를 수 있습니다. 검증에서 버린 행 ${drop}건. 국적은 KOBIS 국적 필터(한국/외국)로 받은 목록으로 구분했습니다.`)
+);
+
+renderYear(); renderCmp();
+})();
+</script>
