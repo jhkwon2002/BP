@@ -104,6 +104,12 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
 .chips button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;border-radius:999px;padding:3px 6px 3px 11px;cursor:pointer}
 .chips button span{color:var(--ink-3);font-size:15px;line-height:1}
 .linkbtn{background:none;border:0;color:var(--chip-ink);font:inherit;font-size:13px;cursor:pointer;padding:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;background:var(--bg);color:var(--ink-2);border:0;padding:6px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--chip);color:var(--chip-ink);font-weight:600}
+input[type=date]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+#dySum{margin:0;color:var(--ink-2);font-size:13px}
 footer{color:var(--ink-3);font-size:12px;display:flex;flex-direction:column;gap:4px}
 footer a{color:var(--ink-2)}
 @media (prefers-reduced-motion:no-preference){.fill{transition:width .35s ease}}
@@ -175,6 +181,33 @@ footer a{color:var(--ink-2)}
     <div class="chips" id="chips"></div>
     <div class="legend" aria-label="범례"><span><i class="sw K"></i>한국영화</span><span><i class="sw F"></i>외국영화</span></div>
     <div class="bars" id="cmpBars"></div>
+  </section>
+
+  <section id="daily">
+    <div class="sec-head">
+      <div>
+        <h2>영화별 흥행 흐름</h2>
+        <p>영화 한 편의 관객수를 일별·주별(월–일)·월별로 봅니다. KOBIS 일별 박스오피스를 모아 합산한 값입니다.</p>
+        <p class="note" id="dyRanges"></p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="picker">
+        <input type="search" id="dq" placeholder="영화명 검색 (예: 왕과 사는 남자)" autocomplete="off" aria-label="일별 흐름을 볼 영화 검색">
+        <div class="sugg" id="dsugg" hidden></div>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="집계 단위">
+        <button type="button" data-u="day" aria-pressed="true">일별</button>
+        <button type="button" data-u="week" aria-pressed="false">주별</button>
+        <button type="button" data-u="month" aria-pressed="false">월별</button>
+      </div>
+      <label class="ctl" for="dFrom">기간 <input type="date" id="dFrom"></label>
+      <label class="ctl" for="dTo">~ <input type="date" id="dTo"></label>
+    </div>
+    <p id="dySum"></p>
+    <div class="chart"><svg id="cDaily" viewBox="0 0 1040 280" role="img" aria-label="선택한 영화의 기간별 관객수 막대 차트"></svg></div>
+    <p class="note" id="dyNote"></p>
+    <details><summary>표로 보기</summary><div class="tbl"><table id="dyTbl"></table></div></details>
   </section>
 
   <footer id="foot"></footer>
@@ -414,10 +447,100 @@ function renderCmp(){
   })), {rank:false});
 }
 
+// ---- section 4: daily flow of one movie
+const DY = {db:null, key:null, unit:'day'};
+const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
+const dotD = s => s.slice(5).replace('-','.');
+function dyMovies(){ return Object.entries(DY.db.movies).map(([k,m]) => ({k, ...m, tot: Object.values(m.d).reduce((s,v) => s + v[0], 0)})); }
+function dyPick(k){
+  DY.key = k; const m = DY.db.movies[k], ds = Object.keys(m.d).sort();
+  $('dq').value = m.t; $('dFrom').value = ds[0]; $('dTo').value = ds[ds.length-1];
+  renderDaily();
+}
+function renderDaily(){
+  const db = DY.db, m = db.movies[DY.key]; if (!m) return;
+  let a = $('dFrom').value, b = $('dTo').value;
+  if (!a || !b) return;
+  if (a > b) [a, b] = [b, a];
+  const inR = s => db.ranges.some(([x,y]) => s >= x && s <= y);
+  const bk = new Map(); let miss = 0;
+  for (let s = a; s <= b; s = addDays(s, 1)){
+    const dow = (new Date(s + 'T00:00:00Z').getUTCDay() + 6) % 7;
+    const key = DY.unit === 'day' ? s : DY.unit === 'week' ? addDays(s, -dow) : s.slice(0,7);
+    if (!bk.has(key)) bk.set(key, {key, a:0, s:0, n:0, first:s, last:s});
+    const g = bk.get(key); g.last = s;
+    if (!inR(s)){ miss++; continue; }
+    const v = m.d[s]; g.n++; if (v){ g.a += v[0]; g.s += v[1]; }
+  }
+  const full = g => DY.unit === 'day' ? 1 : DY.unit === 'week' ? 7 : new Date(Date.UTC(+g.key.slice(0,4), +g.key.slice(5,7), 0)).getUTCDate();
+  const G = [...bk.values()];
+  G.forEach(g => { g.part = g.n < full(g);
+    g.lbl = DY.unit === 'day' ? dotD(g.key) : DY.unit === 'week' ? `${dotD(g.key)}~${dotD(addDays(g.key, 6))}` : g.key.replace('-','.'); });
+  const tot = G.reduce((s,g) => s + g.a, 0), pk = G.reduce((x,g) => g.a > x.a ? g : x, G[0]);
+  const U = {day:'일', week:'주', month:'월'}[DY.unit];
+  $('dySum').textContent = `${m.t} (${NATK[m.n]}영화, 개봉 ${m.o ? m.o.replace(/-/g,'.') : '미상'}) · ${a.replace(/-/g,'.')}–${b.replace(/-/g,'.')} 관객 ${fmt(tot)}명` + (pk && pk.a ? ` · 최고 ${U} ${pk.lbl} ${fmt(pk.a)}명` : '');
+  const notes = [];
+  if (miss) notes.push(`선택 기간 중 ${miss}일은 아직 수집하지 않은 날짜라 빠져 있습니다.`);
+  if (G.some(g => g.part && g.n)) notes.push('옅은 막대는 기간 경계에 걸려 일부 날짜만 합산한 구간입니다.');
+  if (m.o && m.o < db.ranges[0][0]) notes.push(`개봉일(${m.o.replace(/-/g,'.')})이 수집 시작일보다 앞서 그 전 관객은 포함되지 않았습니다.`);
+  $('dyNote').textContent = notes.join(' ');
+  // chart
+  const svg = $('cDaily'), Wd = 1040, Hd = 280, L = 56, R = 12, Tp = 14, B = 30;
+  svg.replaceChildren();
+  const max = niceMax(Math.max(1, ...G.map(g => g.a)));
+  const band = (Wd - L - R) / G.length, x = i => L + (i + .5) * band, yS = v => Hd - B - v / max * (Hd - Tp - B);
+  const mt = max / Math.pow(10, Math.floor(Math.log10(max))), nt = (mt === 2.5 || mt === 5) ? 5 : 4;
+  for (let k = 0; k <= nt; k++){ const v = max * k / nt, yy = yS(v);
+    svg.append(sv('line',{x1:L,x2:Wd-R,y1:yy,y2:yy,class:k?'gridl':'axis'}));
+    const tx = sv('text',{x:L-6,y:yy+4,'text-anchor':'end'}); tx.textContent = v ? man(v) : '0'; svg.append(tx); }
+  const step = Math.max(1, Math.ceil(G.length / 12)), bw = Math.max(1, Math.min(48, band - (band > 6 ? 2 : 0)));
+  const col = m.n === 'K' ? 'var(--kr)' : 'var(--fr)';
+  G.forEach((g,i) => {
+    if (g.a > 0){ const y1 = yS(g.a), h = yS(0) - y1, r = Math.min(4, h/2, bw/2), xL = x(i) - bw/2, xR = xL + bw;
+      svg.append(sv('path',{d:`M${xL},${yS(0)}V${y1+r}Q${xL},${y1} ${xL+r},${y1}H${xR-r}Q${xR},${y1} ${xR},${y1+r}V${yS(0)}Z`,fill:col,opacity:g.part?.5:1})); }
+    if (i % step === 0){ const tx = sv('text',{x:x(i),y:Hd-B+16,'text-anchor':'middle'}); tx.textContent = DY.unit === 'week' ? dotD(g.key) : g.lbl; svg.append(tx); }
+    const h = sv('rect',{x:x(i)-band/2,y:Tp,width:band,height:Hd-Tp-B,class:'hit',tabindex:0});
+    const on = ev => showTip(ev, fmt(g.a) + '명', [g.lbl + (DY.unit === 'day' ? ` (${'월화수목금토일'[(new Date(g.key+'T00:00:00Z').getUTCDay()+6)%7]})` : ''), `매출액 ${won(g.s)}`].concat(g.part ? [`${g.n}일만 합산`] : []));
+    h.addEventListener('pointermove', on); h.addEventListener('focus', on);
+    h.addEventListener('pointerleave', hideTip); h.addEventListener('blur', hideTip); svg.append(h);
+  });
+  if (pk && pk.a){ const i = G.indexOf(pk), tx = sv('text',{x:Math.min(Math.max(x(i), L+30), Wd-R-30),y:yS(pk.a)-6,'text-anchor':'middle',class:'lbl'}); tx.textContent = man(pk.a); svg.append(tx); }
+  // table
+  const hr = el('tr'); ['기간','관객수','매출액','합산 일수'].forEach((h,i) => hr.append(el('th', i ? 'r' : null, h)));
+  const th = el('thead'); th.append(hr); const tb = el('tbody');
+  G.forEach(g => { const r = el('tr'); r.append(el('td',null,g.lbl), el('td','r',fmt(g.a)), el('td','r',fmt(g.s)), el('td','r',`${g.n}일`)); tb.append(r); });
+  $('dyTbl').replaceChildren(th, tb);
+}
+function initDaily(db){
+  DY.db = db;
+  const list = dyMovies().sort((p,q) => q.tot - p.tot);
+  const all = db.ranges.flat().sort();
+  $('dFrom').min = $('dTo').min = all[0]; $('dFrom').max = $('dTo').max = all[all.length-1];
+  $('dyRanges').textContent = '수집한 기간: ' + db.ranges.map(([x,y]) => `${x.replace(/-/g,'.')}–${y.replace(/-/g,'.')}`).join(', ') + ` · 영화 ${fmt(list.length)}편`;
+  const dq = $('dq'), ds = $('dsugg');
+  dq.addEventListener('input', () => {
+    const s = norm(dq.value); if (!s){ ds.hidden = true; return; }
+    const hits = list.filter(m => norm(m.t).includes(s)).slice(0,12);
+    ds.replaceChildren(...(hits.length ? hits.map(m => { const b = el('button'); b.type = 'button';
+      b.append(el('span', null, m.t), el('small', null, `${NATK[m.n]} · ${m.o ? m.o.slice(0,4) : ''} · ${man(m.tot)}명`));
+      b.addEventListener('click', () => { ds.hidden = true; dyPick(m.k); }); return b; })
+      : [el('div','note','수집한 기간에 상영 기록이 있는 영화 중 일치하는 것이 없습니다.')]));
+    ds.hidden = false;
+  });
+  dq.addEventListener('keydown', e => { if (e.key === 'Enter'){ const b = ds.querySelector('button'); if (b) b.click(); } if (e.key === 'Escape') ds.hidden = true; });
+  document.addEventListener('click', e => { if (!e.target.closest('#daily .picker')) ds.hidden = true; });
+  document.querySelectorAll('#daily .seg button').forEach(b => b.addEventListener('click', () => {
+    DY.unit = b.dataset.u; document.querySelectorAll('#daily .seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderDaily(); }));
+  ['dFrom','dTo'].forEach(id => $(id).addEventListener('change', renderDaily));
+  dyPick(list[0].k);
+}
+fetch('daily.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(initDaily)
+  .catch(() => { $('dySum').textContent = '일별 데이터(daily.json)를 불러오지 못했습니다. 이 페이지와 같은 위치에 daily.json이 있어야 합니다.'; });
+
 // ---- footer
 const drop = D.rejectedCount;
 $('foot').append(
-  (() => { const p = el('div'); p.append('출처: ', Object.assign(el('a',null,'KOBIS 영화관입장권통합전산망'), {href:'https://www.kobis.or.kr/kobis/business/stat/boxs/findYearlyBoxOfficeList.do', target:'_blank', rel:'noopener'}), ` 박스오피스 › 연도별 · 역대, 테마통계 › 총 관객수 및 매출액 (전일 기준, 집계 기준일 ${asOfK}).`); return p; })(),
+  (() => { const p = el('div'); p.append('출처: ', Object.assign(el('a',null,'KOBIS 영화관입장권통합전산망'), {href:'https://www.kobis.or.kr/kobis/business/stat/boxs/findYearlyBoxOfficeList.do', target:'_blank', rel:'noopener'}), ` 박스오피스 › 연도별 · 역대 · 일별, 테마통계 › 총 관객수 및 매출액 (전일 기준, 집계 기준일 ${asOfK}).`); return p; })(),
   el('div', null, `KOBIS 안내: 통합전산망 발권 데이터 집계값이며 공식통계(마감 기준)와 다를 수 있습니다. 검증에서 버린 행 ${drop}건. 국적은 KOBIS 국적 필터(한국/외국)로 받은 목록으로 구분했습니다.`)
 );
 

@@ -14,6 +14,8 @@ KOBIS(영화관입장권통합전산망) 박스오피스 데이터로 연도별�
 | `scrape.py` | 역대 상위 200편 + 연도별 상위 50편 수집 → `kobis.json` 새로 작성 |
 | `totals.py` | 연도별 전체 관객수(테마통계) → `totals` 추가 |
 | `nation.py` | 국적 필터(K/F)로 영화별 국적 → `nation` 추가 |
+| `daily.py` | 일별 박스오피스(엑셀)로 영화별 일별 관객수 → `daily.json`에 합침. `python3 daily.py 시작일 종료일`(최대 731일) 또는 `--recent`(최근 7일) |
+| `daily.json` | 영화별 일별 데이터(`movies`, 수집한 기간 `ranges`). 페이지가 실행 중에 불러옴 |
 | `build.py` | `template.html` + `kobis.json` → `index.html` |
 
 ### 명령 (모두 `dashboard/`에서 실행)
@@ -27,7 +29,8 @@ python3 scrape.py && python3 totals.py && python3 nation.py && python3 build.py 
 
 ### 자동 갱신·배포 (`.github/workflows/pages.yml`)
 
-- 매일 07:10 KST(수동 실행도 가능)에 수집 → 검증 → 빌드 → `kobis.json`·`index.html` 커밋 → GitHub Pages 배포.
+- 매일 07:10 KST(수동 실행도 가능)에 수집 → 검증 → 빌드 → `kobis.json`·`daily.json`·`index.html` 커밋 → GitHub Pages 배포.
+- 예약 실행은 일별 데이터를 최근 7일만 받는다. 수동 실행 때 `daily_from`/`daily_to`를 넣으면 그 기간을 받아 합친다.
 - `main`에 `dashboard/**` 변경을 푸시하면 수집 없이 빌드·배포만 한다.
 - 수집이나 검증이 실패하면 커밋·배포하지 않는다(이전 사이트 유지). 검증 조건을 느슨하게 바꾸지 말 것.
 
