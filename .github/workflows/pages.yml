@@ -68,8 +68,8 @@ jobs:
               if len(d["yearly"][str(y)]) < 20: errs.append(f"{y} rows {len(d['yearly'][str(y)])}")
           if [t["y"] for t in d["totals"]] != d["years"]: errs.append("totals years mismatch")
           if d.get("nationMissing", 1) != 0: errs.append(f"nationMissing {d.get('nationMissing')}")
-          dy = json.load(open("daily.json"))
-          if not dy.get("ranges") or not dy.get("movies"): errs.append("daily.json empty")
+          dy = json.load(open("daily/index.json"))
+          if not dy.get("ranges") or not dy.get("movies"): errs.append("daily/index.json empty")
           if errs:
               print("validation failed:", errs); sys.exit(1)
           print("ok", d["asOf"], "rejected", d["rejectedCount"])
@@ -83,13 +83,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add kobis.json daily.json index.html
+          git add kobis.json daily index.html
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
           git commit -m "Update KOBIS data ($(python3 -c 'import json;print(json.load(open("kobis.json"))["asOf"])'))"
           git push
 
       - name: Prepare site
-        run: mkdir -p ../_site && cp index.html daily.json ../_site/
+        run: mkdir -p ../_site && cp -r index.html daily ../_site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
