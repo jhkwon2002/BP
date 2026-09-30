@@ -6,6 +6,15 @@ on:
   schedule:
     - cron: "10 22 * * *"   # 매일 07:10 KST (UTC 22:10)
   workflow_dispatch:
+    inputs:
+      daily_from:
+        description: "일별 데이터 수집 시작일 (YYYY-MM-DD, 비워 두면 최근 7일만)"
+        required: false
+        default: ""
+      daily_to:
+        description: "일별 데이터 수집 종료일 (YYYY-MM-DD, 최대 731일, 어제까지)"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths: ["dashboard/**", ".github/workflows/pages.yml"]
@@ -22,7 +31,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: dashboard
@@ -36,6 +45,18 @@ jobs:
           python3 totals.py
           python3 nation.py
 
+      - name: Collect daily box office
+        if: github.event_name != 'push'
+        env:
+          DAILY_FROM: ${{ inputs.daily_from }}
+          DAILY_TO: ${{ inputs.daily_to }}
+        run: |
+          if [ -n "$DAILY_FROM" ] || [ -n "$DAILY_TO" ]; then
+            python3 daily.py "$DAILY_FROM" "$DAILY_TO"
+          else
+            python3 daily.py --recent
+          fi
+
       - name: Validate data
         run: |
           python3 - <<'EOF'
@@ -47,6 +68,8 @@ jobs:
               if len(d["yearly"][str(y)]) < 20: errs.append(f"{y} rows {len(d['yearly'][str(y)])}")
           if [t["y"] for t in d["totals"]] != d["years"]: errs.append("totals years mismatch")
           if d.get("nationMissing", 1) != 0: errs.append(f"nationMissing {d.get('nationMissing')}")
+          dy = json.load(open("daily/index.json"))
+          if not dy.get("ranges") or not dy.get("movies"): errs.append("daily/index.json empty")
           if errs:
               print("validation failed:", errs); sys.exit(1)
           print("ok", d["asOf"], "rejected", d["rejectedCount"])
@@ -60,13 +83,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add kobis.json index.html
+          git add kobis.json daily index.html
           if git diff --cached --quiet; then echo "no changes"; exit 0; fi
           git commit -m "Update KOBIS data ($(python3 -c 'import json;print(json.load(open("kobis.json"))["asOf"])'))"
           git push
 
       - name: Prepare site
-        run: mkdir -p ../_site && cp index.html ../_site/index.html
+        run: mkdir -p ../_site && cp -r index.html daily ../_site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

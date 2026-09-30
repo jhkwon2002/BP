@@ -5,13 +5,13 @@ BASE = "https://www.kobis.or.kr/kobis/business/stat/boxs/"
 CJ = "cj.txt"
 MAX_RETRY = 3
 
-def curl(args):
+def curl(args, marker='id="searchForm"'):
     for attempt in range(1, MAX_RETRY + 1):
         r = subprocess.run(["curl", "-sS", "-b", CJ, "-c", CJ, "--max-time", "60",
                             "-w", "\n%{http_code}"] + args, capture_output=True)
         out = r.stdout.decode("utf-8", "replace")
         body, _, code = out.rpartition("\n")
-        if r.returncode == 0 and code == "200" and 'id="searchForm"' in body:
+        if r.returncode == 0 and code == "200" and marker in body:
             return body
         print(f"  retry {attempt}/{MAX_RETRY}: rc={r.returncode} code={code}", file=sys.stderr)
         time.sleep(2 * attempt)
