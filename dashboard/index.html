@@ -119,15 +119,49 @@ input[type=date]{font:inherit;color:var(--ink);background:var(--bg);border:1px s
 #dySum{margin:0;color:var(--ink-2);font-size:13px}
 footer{color:var(--ink-3);font-size:12px;display:flex;flex-direction:column;gap:4px}
 footer a{color:var(--ink-2)}
+.ins-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ins-card{border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--bg)}
+.ins-card h3{color:var(--ink);font-size:14px}
+.ins-value{font-family:var(--mono);font-size:24px;font-weight:500;overflow-wrap:anywhere;line-height:1.3}
+.ins-card p{margin:0;color:var(--ink-2);font-size:12px}
+.ins-card svg{width:100%;height:42px;margin-top:auto}
+.ins-card details{font-size:12px;color:var(--ink-3)}
+.ins-card[hidden]{display:none}
+.ins-group{font-size:11px;color:var(--chip-ink);letter-spacing:.04em}
+.ins-context{border-left:3px solid var(--kr);padding-left:12px;color:var(--ink-2);font-size:13px}
+.ins-nav{display:flex;flex-wrap:wrap;gap:10px}
+.ins-nav a{color:var(--chip-ink);font-size:13px}
+@media(max-width:900px){.ins-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.ins-grid{grid-template-columns:1fr}.ins-value{font-size:26px}}
 @media (prefers-reduced-motion:no-preference){.fill{transition:width .35s ease}}
 </style>
 
 <div class="wrap">
   <header>
     <div class="eyebrow">KOBIS 영화관입장권통합전산망 · 박스오피스</div>
-    <h1>한국 극장가, 해마다 누가 가장 많이 모았나</h1>
+    <h1>숫자로 읽는 한국 극장가</h1>
     <div class="meta" id="meta"></div>
+    <nav class="ins-nav" aria-label="대시보드 섹션"><a href="#insights">20가지 인사이트</a><a href="#trend">시장 추세</a><a href="#year">흥행 순위</a><a href="#daily">영화별 흐름</a></nav>
   </header>
+
+  <section id="insights" aria-labelledby="insTitle">
+    <div class="sec-head">
+      <div><h2 id="insTitle">원자료에서 찾은 20가지 인사이트</h2><p>시장 규모부터 흥행 집중도, 영화의 개봉 후 흐름까지. 카드의 계산 기준을 펼쳐 원자료와 연결해 보세요.</p></div>
+      <label class="ctl" for="insYear">분석 연도 <select id="insYear"></select></label>
+    </div>
+    <p id="insContext" class="ins-context"></p>
+    <div class="seg" role="group" aria-label="인사이트 분류">
+      <button type="button" data-ins="all" aria-pressed="true">전체 20</button>
+      <button type="button" data-ins="market" aria-pressed="false">시장 6</button>
+      <button type="button" data-ins="focus" aria-pressed="false">집중도 5</button>
+      <button type="button" data-ins="films" aria-pressed="false">흥행 5</button>
+      <button type="button" data-ins="daily" aria-pressed="false">영화 흐름 4</button>
+    </div>
+    <div class="ins-grid" id="insAnnual"></div>
+    <div class="sec-head"><div><h3>선택한 영화의 흥행 흐름 · 17–20</h3><p id="insMovie" aria-live="polite">일별 원자료를 불러오는 중…</p></div><a class="linkbtn" href="#daily">영화·기간 바꾸기 ↓</a></div>
+    <div class="ins-grid" id="insDaily"></div>
+    <p class="note">연간 카드의 작은 선은 수집된 연도별 추세입니다. 원자료의 통합전산망 집계·수집 범위 변화도 수치에 영향을 줄 수 있습니다. 평균 매출은 매출액÷관객수이며 정가나 물가 조정값이 아닙니다.</p>
+  </section>
 
   <div class="stats" id="stats"></div>
 
@@ -411,6 +445,91 @@ function trendTable(ry){
   s.addEventListener('change', renderTrend); });
 renderTrend();
 
+// ---- derived insights: annual totals and ranked sample remain separate
+const insData = new Map(years.map(y => {
+  const rows = D.yearly[y].slice().sort((a,b) => a.r-b.r), t = totByY.get(y);
+  const sum = n => rows.slice(0,n).reduce((s,r) => s+r.a,0);
+  const sorted = rows.map(r => r.a).sort((a,b) => a-b), mid = Math.floor(sorted.length/2);
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid-1]+sorted[mid])/2;
+  const sales = rows.slice().sort((a,b) => b.s-a.s || a.r-b.r);
+  const gaps = rows.map((r,i) => {
+    const salesRank = 1 + sales.filter(s => s.s > r.s).length;
+    return {r, audienceRank:r.r, salesRank, gap:Math.abs(r.r-salesRank)};
+  }).sort((a,b) => b.gap-a.gap || a.audienceRank-b.audienceRank);
+  return [y,{rows,t,sum,median,gap:gaps[0],prev:totByY.get(y-1)}];
+}));
+const per = (n,d) => d > 0 ? n/d*100 : null;
+const annualInsights = [
+  ['market','전체 관객수',d=>d.t.a,'aud','전체 극장 시장의 수요 규모입니다.','KOBIS 테마통계 전체 관객수'],
+  ['market','전체 매출액',d=>d.t.s,'sales','관객수와 함께 시장 규모를 읽습니다.','KOBIS 테마통계 전체 매출액 · 명목 금액'],
+  ['market','관객 1명당 평균 매출',d=>d.t.a?d.t.s/d.t.a:null,'won','티켓 가격·상영 포맷 구성의 영향을 함께 받습니다.','전체 매출액 ÷ 전체 관객수 · 할인·무료 관객 포함'],
+  ['market','한국영화 관객 점유율',d=>per(d.t.ak,d.t.a),'pct','국내 작품이 전체 관객에서 차지하는 몫입니다.','한국영화 전체 관객수 ÷ 전체 관객수 × 100'],
+  ['market','전년 대비 관객 증감', (d,y)=>partial(y)?null:d.prev?per(d.t.a-d.prev.a,d.prev.a):null,'signed','전년도 전체 실적과 비교한 시장 성장률입니다.','(해당 연도 관객수 − 전년 관객수) ÷ 전년 관객수 × 100 · 집계 중 연도 제외'],
+  ['market','2019년 대비 관객 수준',(d,y)=>partial(y)?null:per(d.t.a,totByY.get(2019)?.a),'pct','2019년 시장 규모를 100%로 놓고 비교합니다.','해당 연도 전체 관객수 ÷ 2019년 전체 관객수 × 100 · 집계 중 연도 제외'],
+  ['focus','1위 영화의 시장 점유율',d=>per(d.sum(1),d.t.a),'pct','가장 큰 흥행작 한 편에 얼마나 모였을까요?','연도별 1위 영화의 해당 연도 관객수 ÷ 전체 관객수 × 100'],
+  ['focus','상위 5편의 시장 점유율',d=>per(d.sum(5),d.t.a),'pct','초대형 흥행작에 대한 시장 의존도입니다.','연도별 상위 5편 관객 합계 ÷ 전체 관객수 × 100'],
+  ['focus','상위 10편의 시장 점유율',d=>per(d.sum(10),d.t.a),'pct','흥행 상위권으로 관객이 몰리는 정도입니다.','연도별 상위 10편 관객 합계 ÷ 전체 관객수 × 100'],
+  ['focus','상위 10편 밖의 관객수',d=>Math.max(0,d.t.a-d.sum(10)),'aud','상위 10편 이외 작품들이 모은 관객입니다.','전체 관객수 − 연도별 상위 10편 관객 합계 · 개별 작품 데이터는 추정하지 않음'],
+  ['focus','상위 50편의 시장 포괄률',d=>per(d.sum(50),d.t.a),'pct','수집된 연도별 영화 표본이 시장을 얼마나 담는지 봅니다.','수집된 연도별 상위 50편 관객 합계 ÷ 전체 관객수 × 100'],
+  ['films','100만 관객 이상 작품',d=>d.rows.filter(r=>r.a>=1e6).length,'count','수집된 상위 50편 중 중대형 흥행작의 폭입니다.','해당 연도 관객수 ≥ 1,000,000인 작품 수 · 상위 50편 표본에 한정'],
+  ['films','1,000만 관객 이상 작품',d=>d.rows.filter(r=>r.a>=1e7).length,'count','한 해의 초대형 흥행작이 몇 편인지 봅니다.','해당 연도 관객수 ≥ 10,000,000인 작품 수 · 누적 천만 영화 수와 다름'],
+  ['films','상위 50편 관객수 중앙값',d=>d.median,'aud','대형 흥행작의 영향을 줄여 표본의 중간 성과를 봅니다.','상위 50편 관객수를 정렬한 중앙값 · 전체 개봉작 중앙값이 아님'],
+  ['films','상위 10편 중 한국영화',d=>d.rows.slice(0,10).filter(r=>NAT(r.code)==='K').length,'count','흥행 상위권의 국적 구성을 작품 수로 읽습니다.','해당 연도 관객 순위 1–10위 중 국적 K인 작품 수'],
+  ['films','관객·매출 순위 최대 차이',d=>d.gap?.gap??null,'rank','관객 순위와 매출 순위가 가장 다른 작품입니다.','상위 50편 내부에서 |관객 순위 − 매출 순위|의 최댓값 · 동률 매출은 공동 순위']
+];
+const insFormat = (v,u) => v == null || !Number.isFinite(v) ? '비교 불가' :
+  u==='aud'?`${man(v)}명`:u==='sales'?won(v):u==='won'?`${fmt(Math.round(v))}원`:
+  u==='count'?`${fmt(v)}편`:u==='rank'?`${v}계단`: `${u==='signed'&&v>0?'+':''}${v.toFixed(1)}%`;
+let insFilter = 'all';
+const groupNames={market:'시장 규모',focus:'흥행 집중도',films:'작품 성과',daily:'영화별 흐름'};
+function insCard(num,group,title,value,context,formula){
+  const c=el('article','ins-card'); c.dataset.group=group; c.dataset.metric=String(num);
+  c.append(el('span','ins-group',`${String(num).padStart(2,'0')} · ${groupNames[group]}`),el('h3',null,title),el('div','ins-value',value),el('p',null,context));
+  const detail=el('details'), summary=el('summary',null,'계산 기준'); detail.append(summary,el('p',null,formula)); c.append(detail); return c;
+}
+function insSpark(card,series,selected){
+  const valid=series.filter(p=>p.v!=null&&Number.isFinite(p.v)); if(valid.length<2)return;
+  const svg=sv('svg',{viewBox:'0 0 220 42',role:'img','aria-label':'연도별 추세; 자세한 값은 펼친 표 참조'});
+  const lo=Math.min(...valid.map(p=>p.v)),hi=Math.max(...valid.map(p=>p.v));
+  const x=y=>5+210*years.indexOf(y)/(years.length-1), sy=v=>36-30*(v-lo)/(hi-lo||1);
+  // Keep collection gaps separate, and distinguish the in-progress year's segment.
+  series.forEach((p,i)=>{const prev=series[i-1]; if(!prev||p.v==null||prev.v==null)return;
+    svg.append(sv('line',{x1:x(prev.y),y1:sy(prev.v),x2:x(p.y),y2:sy(p.v),stroke:'var(--kr)','stroke-width':2,...(partial(p.y)?{'stroke-dasharray':'3 3'}:{})}));});
+  const p=valid.find(p=>p.y===selected); if(p)svg.append(sv('circle',{cx:x(p.y),cy:sy(p.v),r:4,fill:'var(--fr)'}));
+  card.insertBefore(svg,card.lastChild);
+  const detail=card.lastChild, table=el('table'), header=el('tr'); header.append(el('th',null,'연도'),el('th','r','값'));
+  const head=el('thead');head.append(header); const body=el('tbody');
+  series.forEach(p=>{const row=el('tr');row.append(el('td',null,`${p.y}${partial(p.y)?' (집계 중)':''}`),el('td','r',insFormat(p.v,p.unit)));body.append(row);});
+  table.append(head,body); const wrap=el('div','tbl');wrap.append(table);detail.append(wrap);
+}
+function filterInsights(){
+  document.querySelectorAll('#insights .ins-card').forEach(c=>c.hidden=insFilter!=='all'&&c.dataset.group!==insFilter);
+}
+function renderInsights(){
+  const y=+$('insYear').value,d=insData.get(y);
+  $('insContext').textContent=`${y}년 ${partial(y)?`${asOfK}까지 집계 중 · 연간 증감·2019년 비교 제외`:'연간 집계'} · 시장 지표는 전체 극장, 작품 지표는 상위 ${d.rows.length}편. 영화별 4개 지표는 아래에서 선택한 영화·기간을 따릅니다.`;
+  $('insAnnual').replaceChildren(...annualInsights.map(([group,title,calc,unit,desc,formula],i)=>{
+    const v=calc(d,y); let context=desc;
+    if(i===6)context=`${d.rows[0].t} · ${desc}`;
+    if(i===15&&d.gap)context=`${d.gap.r.t} · 관객 ${d.gap.audienceRank}위 / 매출 ${d.gap.salesRank}위`;
+    if(v==null)context=partial(y)?'집계 중인 연도와 과거의 연간 실적은 직접 비교하지 않습니다.':'비교에 필요한 이전 연도 자료가 없습니다.';
+    const card=insCard(i+1,group,title,insFormat(v,unit),context,formula);
+    insSpark(card,years.map(yr=>({y:yr,v:calc(insData.get(yr),yr),unit})),y);return card;
+  })); filterInsights();
+}
+years.slice().reverse().forEach(y=>$('insYear').append(new Option(`${y}${partial(y)?' (집계 중)':''}`,String(y))));
+$('insYear').value=String(years.filter(y=>!partial(y)).at(-1)??curYear);
+$('insYear').addEventListener('change',renderInsights);
+document.querySelectorAll('[data-ins]').forEach(b=>b.addEventListener('click',()=>{
+  insFilter=b.dataset.ins;document.querySelectorAll('[data-ins]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));filterInsights();
+}));
+const dailyInsightNames=['개봉 첫 7일 관객수','개봉 2주차 관객 유지율','선택 기간 주말 관객 비중','선택 기간 최고 흥행일'];
+function dailyInsightsMessage(message){
+  $('insMovie').textContent=message;
+  $('insDaily').replaceChildren(...dailyInsightNames.map((t,i)=>insCard(17+i,'daily',t,'—',message,'일별 원자료를 정상적으로 불러온 뒤 계산합니다.')));filterInsights();
+}
+dailyInsightsMessage('일별 원자료를 불러오는 중…');renderInsights();
+
 // ---- section 3: movie compare
 const movies = new Map();
 D.alltime.forEach(r => movies.set(r.code, {code:r.code, t:r.t, o:r.o, all:r, yrs:[]}));
@@ -484,10 +603,12 @@ async function renderDaily(){
   if (a > b) [a, b] = [b, a];
   const seq = ++DY.seq;
   $('dySum').textContent = '불러오는 중…';
-  try { await dyLoadYears(a, b); }
-  catch (err){ if (seq === DY.seq) $('dySum').textContent = `일별 데이터를 불러오지 못했습니다 (${err.message}).`; return; }
+  dailyInsightsMessage('선택한 영화의 일별 원자료를 불러오는 중…');
+  const open=m[1], openEnd=open?addDays(open,13):null;
+  try { await Promise.all([dyLoadYears(a, b),open?dyLoadYears(open,openEnd):Promise.resolve()]); }
+  catch (err){ if (seq === DY.seq){$('dySum').textContent = `일별 데이터를 불러오지 못했습니다 (${err.message}).`;dailyInsightsMessage('일별 원자료를 불러오지 못했습니다. 영화·기간을 다시 선택해 주세요.');} return; }
   if (seq !== DY.seq) return;  // 더 최근 요청이 있으면 버림
-  const [title, open, nat] = m;
+  const [title, , nat] = m;
   const bk = new Map(); let miss = 0;
   for (let s = a; s <= b; s = addDays(s, 1)){
     const dow = (new Date(s + 'T00:00:00Z').getUTCDay() + 6) % 7;
@@ -535,6 +656,26 @@ async function renderDaily(){
   const th = el('thead'); th.append(hr); const tb = el('tbody');
   G.forEach(g => { const r = el('tr'); r.append(el('td',null,g.lbl), el('td','r',fmt(g.a)), el('td','r',fmt(g.s)), el('td','r',`${g.n}일`)); tb.append(r); });
   $('dyTbl').replaceChildren(th, tb);
+  renderMovieInsights(m,a,b);
+}
+function renderMovieInsights(m,a,b){
+  const [,open]=m, read=s=>DY.years[+s.slice(0,4)]?dyVal(DY.mid,s)?.[0]??0:0;
+  const available=(start,n)=>start&&Array.from({length:n},(_,i)=>addDays(start,i)).every(s=>dyInR(s)&&s<=D.asOf);
+  const opening=available(open,7)?Array.from({length:7},(_,i)=>read(addDays(open,i))).reduce((s,v)=>s+v,0):null;
+  const second=available(open,14)?Array.from({length:7},(_,i)=>read(addDays(open,i+7))).reduce((s,v)=>s+v,0):null;
+  let total=0,weekend=0,peak=null,missing=0;
+  for(let s=a;s<=b;s=addDays(s,1)){
+    if(!dyInR(s)||s>D.asOf){missing++;continue;}const n=read(s),dow=new Date(s+'T00:00:00Z').getUTCDay();
+    total+=n;if(dow===0||dow===6)weekend+=n;if(!peak||n>peak.a)peak={s,a:n};
+  }
+  $('insMovie').textContent=`${m[0]} · 개봉 ${open??'미상'} · 선택 기간 ${a}–${b}${missing?` · 미수집 ${missing}일 제외`:''}`;
+  const defs=[
+    ['개봉 첫 7일 관객수',opening==null?'자료 부족':`${man(opening)}명`,opening==null?'개봉일과 7일 전체의 수집 여부를 확인해야 합니다.':'사전 시사회 관객을 제외한 개봉 초반 성과입니다.','개봉일 포함 7일간 관객 합계 · 선택 기간과 독립 · 미수집일이 있으면 산출하지 않음'],
+    ['개봉 2주차 관객 유지율',opening>0&&second!=null?`${(second/opening*100).toFixed(1)}%`:'자료 부족','100% 이상이면 개봉 2주차 관객이 첫 주보다 많습니다.','개봉 8–14일 관객 합계 ÷ 개봉 1–7일 관객 합계 × 100 · 두 주 전체 수집 및 첫 주 관객 > 0 필요'],
+    ['선택 기간 주말 관객 비중',total>0?`${(weekend/total*100).toFixed(1)}%`:'관객 없음','토·일 관객이 수집된 기간 관객에서 차지하는 비중입니다.','선택 기간 토·일 관객 합계 ÷ 선택 기간 전체 관객 합계 × 100 · 미수집일 제외 · 공휴일 별도 구분 없음'],
+    ['선택 기간 최고 흥행일',peak?.a>0?peak.s:'관객 없음',peak?.a>0?`${fmt(peak.a)}명 · 하루에 가장 많은 관객이 모인 날`:'선택 기간에 양수 관객 기록이 없습니다.','선택 기간의 일별 관객수 최댓값 · 동률이면 가장 이른 날짜 · 미수집일 제외']
+  ];
+  $('insDaily').replaceChildren(...defs.map(([t,v,c,f],i)=>insCard(17+i,'daily',t,v,c,f)));filterInsights();
 }
 function initDaily(idx){
   const toDate = n => n == null ? null : new Date(n * 864e5).toISOString().slice(0,10);  // 1970-01-01부터 센 일수 -> 날짜
@@ -562,7 +703,7 @@ function initDaily(idx){
   dyPick((list.find(m => m.first.slice(0,4) === lastY) || list[0]).i);  // 기본: 가장 최근 연도에 처음 상영한 영화 중 관객 최다
 }
 fetch('daily/index.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(initDaily)
-  .catch(() => { $('dySum').textContent = '일별 데이터(daily/index.json)를 불러오지 못했습니다. 이 페이지와 같은 위치에 daily 폴더가 있어야 합니다.'; });
+  .catch(() => { $('dySum').textContent = '일별 데이터(daily/index.json)를 불러오지 못했습니다. 이 페이지와 같은 위치에 daily 폴더가 있어야 합니다.';dailyInsightsMessage('일별 원자료를 불러오지 못했습니다.'); });
 
 // ---- footer
 const drop = D.rejectedCount;
