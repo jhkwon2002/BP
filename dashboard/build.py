@@ -8,6 +8,7 @@ import base64
 import gzip
 import json
 from pathlib import Path
+import re
 import sys
 
 body = open("template.html", encoding="utf-8").read()
@@ -26,8 +27,26 @@ if "--preview" in sys.argv:
         raw = path.read_bytes()
         json.loads(raw)  # Do not package malformed source data.
         bundled[path.name] = base64.b64encode(gzip.compress(raw, mtime=0)).decode("ascii")
-    tag = '<script id="daily-bundle" type="application/json">' + json.dumps(bundled, separators=(",", ":")) + '</script>\n'
-    page = page.replace('<script id="kobis-data"', tag + '<script id="kobis-data"', 1)
+    # File preview renderers may discard non-executable JSON script elements.
+    # Put preview data directly in the executable script so it needs neither
+    # those DOM elements nor relative file requests.
+    page, count = re.subn(
+        r"// ---- primary data: begin.*?// ---- primary data: end",
+        lambda _: "const D = " + data + ";",
+        page, flags=re.S,
+    )
+    assert count == 1, "primary data bootstrap marker missing"
+    page, count = re.subn(
+        r"// ---- daily bundle: begin.*?// ---- daily bundle: end",
+        lambda _: "const dailyBundle = " + json.dumps(bundled, separators=(",", ":")) + ";",
+        page, flags=re.S,
+    )
+    assert count == 1, "daily bundle marker missing"
+    data_tag = '<script id="kobis-data" type="application/json">' + data + '</script>'
+    assert page.count(data_tag) == 1
+    page = page.replace(data_tag, "", 1)
+    page = page.replace('<title>한국 박스오피스 관객 비교</title>', '<title>KOBIS 테마별 조회 미리보기</title>', 1)
+    page = page.replace('KOBIS 영화관입장권통합전산망 · 박스오피스</div>', 'KOBIS 박스오피스 · 20개 테마 조회 미리보기</div>', 1)
 
 if "--artifact" in sys.argv:
     open("artifact.html", "w", encoding="utf-8").write(page)

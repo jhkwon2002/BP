@@ -262,6 +262,7 @@ footer a{color:var(--ink-2)}
 <script id="kobis-data" type="application/json">__DATA__</script>
 <script>
 (async function(){
+// ---- primary data: begin
 let D;
 try {
   const raw = document.getElementById('kobis-data').textContent;
@@ -279,6 +280,7 @@ try {
   document.querySelectorAll('.wrap > section').forEach(section => section.hidden = true);
   return;
 }
+// ---- primary data: end
 const $ = id => document.getElementById(id);
 const fmt = n => n.toLocaleString('ko-KR');
 const man = n => n >= 1e8 ? (n/1e8).toFixed(2).replace(/\.?0+$/,'') + '억' : n >= 1e4 ? Math.round(n/1e4).toLocaleString('ko-KR') + '만' : fmt(n);
@@ -510,8 +512,10 @@ function renderCmp(){
 
 // ---- section 4: daily flow of one movie (daily/index.json + 필요한 연도 파일만 불러옴)
 const DY = {idx:null, years:{}, mid:null, unit:'day', seq:0};
+// ---- daily bundle: begin
 const dailyBundleNode = document.getElementById('daily-bundle');
 const dailyBundle = dailyBundleNode ? JSON.parse(dailyBundleNode.textContent) : null;
+// ---- daily bundle: end
 const dailyRequests = new Map();
 function readDailyJSON(path){
   if (!dailyRequests.has(path)) dailyRequests.set(path, (async () => {
