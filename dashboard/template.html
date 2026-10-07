@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>한국 박스오피스 관객 비교</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +48,7 @@ h3{font-size:13px;font-weight:600;margin:0;color:var(--ink-2)}
 .stat .k{font-size:12px;color:var(--ink-3)}
 .stat .v{font-family:var(--mono);font-size:18px;font-weight:500}
 section{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+section[hidden]{display:none}
 .sec-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px}
 .sec-head p{margin:2px 0 0;color:var(--ink-2);font-size:13px;max-width:62ch}
 .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -259,8 +261,24 @@ footer a{color:var(--ink-2)}
 
 <script id="kobis-data" type="application/json">__DATA__</script>
 <script>
-(function(){
-const D = JSON.parse(document.getElementById('kobis-data').textContent);
+(async function(){
+let D;
+try {
+  const raw = document.getElementById('kobis-data').textContent;
+  if (raw.trim().startsWith('{')) D = JSON.parse(raw);
+  else {
+    const response = await fetch('kobis.json');
+    if (!response.ok) throw new Error(response.status);
+    D = await response.json();
+  }
+} catch (err) {
+  const message = document.createElement('p');
+  message.textContent = '대시보드 데이터를 불러오지 못했습니다. 서버 없이 보려면 독립 미리보기 파일을 여세요. ';
+  const link = document.createElement('a');link.href='preview.html';link.textContent='미리보기 열기';message.append(link);
+  document.getElementById('stats').replaceChildren(message);
+  document.querySelectorAll('.wrap > section').forEach(section => section.hidden = true);
+  return;
+}
 const $ = id => document.getElementById(id);
 const fmt = n => n.toLocaleString('ko-KR');
 const man = n => n >= 1e8 ? (n/1e8).toFixed(2).replace(/\.?0+$/,'') + '억' : n >= 1e4 ? Math.round(n/1e4).toLocaleString('ko-KR') + '만' : fmt(n);
@@ -492,6 +510,25 @@ function renderCmp(){
 
 // ---- section 4: daily flow of one movie (daily/index.json + 필요한 연도 파일만 불러옴)
 const DY = {idx:null, years:{}, mid:null, unit:'day', seq:0};
+const dailyBundleNode = document.getElementById('daily-bundle');
+const dailyBundle = dailyBundleNode ? JSON.parse(dailyBundleNode.textContent) : null;
+const dailyRequests = new Map();
+function readDailyJSON(path){
+  if (!dailyRequests.has(path)) dailyRequests.set(path, (async () => {
+    if (dailyBundle){
+      const encoded = dailyBundle[path];
+      if (!encoded) throw new Error(`일별 자료 없음: ${path}`);
+      if (typeof DecompressionStream === 'undefined') throw new Error('이 브라우저는 독립 미리보기의 압축 해제를 지원하지 않습니다.');
+      const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      return JSON.parse(await new Response(stream).text());
+    }
+    const response = await fetch(`daily/${path}`);
+    if (!response.ok) throw new Error(`${path}: ${response.status}`);
+    return response.json();
+  })().catch(err => { dailyRequests.delete(path); throw err; }));
+  return dailyRequests.get(path);
+}
 const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); };
 const dotD = s => s.slice(5).replace('-','.');
 const doy = s => Math.round((Date.parse(s + 'T00:00:00Z') - Date.UTC(+s.slice(0,4), 0, 1)) / 864e5);
@@ -504,8 +541,7 @@ function dyLoadYears(a, b){
   const need = [];
   for (let y = +a.slice(0,4); y <= +b.slice(0,4); y++)
     if (!DY.years[y] && DY.idx.ranges.some(([x,z]) => +x.slice(0,4) <= y && y <= +z.slice(0,4))) need.push(y);
-  return Promise.all(need.map(y => fetch(`daily/${y}.json`).then(r => { if (!r.ok) throw new Error(`${y}: ${r.status}`); return r.json(); })
-    .then(j => { DY.years[y] = j; })));
+  return Promise.all(need.map(y => readDailyJSON(`${y}.json`).then(j => { DY.years[y] = j; })));
 }
 function dyPick(mid){
   DY.mid = mid; const m = DY.idx.movies[mid];
@@ -598,7 +634,7 @@ function initDaily(idx){
   dyPick((list.find(m => m.first.slice(0,4) === lastY) || list[0]).i);  // 기본: 가장 최근 연도에 처음 상영한 영화 중 관객 최다
   initThemeMovies();
 }
-fetch('daily/index.json').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(initDaily)
+readDailyJSON('index.json').then(initDaily)
   .catch(() => { $('dySum').textContent = '일별 데이터(daily/index.json)를 불러오지 못했습니다. 이 페이지와 같은 위치에 daily 폴더가 있어야 합니다.'; });
 
 // ---- additional query themes, each with its own conditions, chart and table

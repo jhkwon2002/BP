@@ -10,7 +10,8 @@ KOBIS(영화관입장권통합전산망) 박스오피스 데이터로 연도별�
 |---|---|
 | `template.html` | 페이지 소스(CSS·JS). 데이터 자리는 `__DATA__` 한 곳. **화면 수정은 여기서** |
 | `kobis.json` | 수집한 데이터. 손으로 고치지 말고 스크립트로만 갱신 |
-| `index.html` | 빌드 결과(독립 페이지). 직접 고치지 말 것 |
+| `index.html` | 운영용 빌드 결과. `daily/`와 함께 웹서버에서 실행하며 직접 고치지 말 것 |
+| `preview.html` | `build.py --preview`가 만드는 서버 없는 미리보기. 일별 자료도 압축해 포함하며 Git에는 저장하지 않음 |
 | `scrape.py` | 역대 상위 200편 + 연도별 상위 50편 수집 → `kobis.json` 새로 작성 |
 | `totals.py` | 연도별 전체 관객수(테마통계) → `totals` 추가 |
 | `nation.py` | 국적 필터(K/F)로 영화별 국적 → `nation` 추가 |
@@ -23,6 +24,7 @@ KOBIS(영화관입장권통합전산망) 박스오피스 데이터로 연도별�
 
 ```sh
 python3 build.py                    # 화면만 고쳤을 때
+python3 build.py --preview          # 파일/앱 미리보기: preview.html을 열기
 python3 scrape.py && python3 totals.py && python3 nation.py && python3 build.py   # 데이터 갱신 (순서 지킬 것)
 ```
 
